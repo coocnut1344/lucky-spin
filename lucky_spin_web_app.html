@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucky Spin - Vòng Quay May Mắn</title>
+  
+  <!-- FAVICON SVG RỰC RỠ TÍCH HỢP TRỰC TIẾP -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%231e293b' stroke='%23f59e0b' stroke-width='3'/%3E%3Cpath d='M50 50 L50 4 A46 46 0 0 1 96 50 Z' fill='%23ef4444'/%3E%3Cpath d='M50 50 L96 50 A46 46 0 0 1 50 96 Z' fill='%23f59e0b'/%3E%3Cpath d='M50 50 L50 96 A46 46 0 0 1 4 50 Z' fill='%2310b981'/%3E%3Cpath d='M50 50 L4 50 A46 46 0 0 1 50 4 Z' fill='%233b82f6'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%23ffffff' stroke='%23f59e0b' stroke-width='2'/%3E%3Cpolygon points='50,18 45,4 55,4' fill='%23f87171' stroke='%23b91c1c' stroke-width='1'/%3E%3C/svg%3E">
+
+  <!-- Thư viện Excel (SheetJS) & Pháo hoa (Confetti) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent-gold: #f59e0b;
+      --text-main: #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    
+    body {
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      padding: 24px 16px;
+      color: var(--text-main);
+    }
+
+    /* Tiêu đề chính */
+    .header-title {
+      text-align: center;
+      margin-bottom: 24px;
+      color: #ffffff;
+      font-size: 32px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      text-shadow: 0 0 20px rgba(245, 158, 11, 0.6), 0 4px 10px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .header-title svg {
+      width: 40px;
+      height: 40px;
+      filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.8));
+    }
+
+    /* Thanh điều khiển trung tâm bóng bẩy */
+    .global-controls {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      max-width: 1250px;
+      margin: 0 auto 28px auto;
+      padding: 18px 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-group label {
+      font-weight: 700;
+      font-size: 14px;
+      color: #334155;
+    }
+    
+    input[type="number"] {
+      padding: 8px 12px;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      outline: none;
+      transition: 0.2s;
+      text-align: center;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    /* Nút bấm hiện đại có hiệu ứng 3D nhẹ */
+    .btn {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+    .btn-fast { background: linear-gradient(135deg, #f97316, #ea580c); color: white; }
+    .btn-warning { background: linear-gradient(135deg, #eab308, #ca8a04); color: white; }
+    .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+    .btn-excel { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .btn-reset { background: linear-gradient(135deg, #64748b, #475569); color: white; }
+
+    /* Khung chứa các vòng quay */
+    .wheels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Thẻ từng vòng quay */
+    .wheel-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      transition: transform 0.3s ease;
+    }
+
+    .wheel-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .wheel-title {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #1e293b;
+      background: linear-gradient(135deg, #1e293b, #475569);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      margin: 10px 0;
+    }
+
+    /* Kim chỉ vòng quay chuẩn xịn */
+    .arrow {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 26px solid #ef4444;
+      z-index: 10;
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Hiển thị kết quả trúng thưởng */
+    .wheel-result {
+      min-height: 36px;
+      font-weight: 800;
+      color: #dc2626;
+      font-size: 17px;
+      margin: 10px 0;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-word;
+      padding: 0 8px;
+    }
+
+    .wheel-btn-group {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+
+    .wheel-btn-group .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .wheel-controls {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    textarea.wheel-items {
+      width: 100%;
+      height: 70px;
+      padding: 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 13px;
+      outline: none;
+      resize: vertical;
+      transition: 0.2s;
+    }
+
+    textarea.wheel-items:focus {
+      border-color: var(--primary-color);
+    }
+
+    .limit-hint {
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 class="header-title">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="48" fill="#1e293b" stroke="#f59e0b" stroke-width="4"/>
+      <path d="M50 50 L50 4 A46 46 0 0 1 96 50 Z" fill="#ef4444"/>
+      <path d="M50 50 L96 50 A46 46 0 0 1 50 96 Z" fill="#f59e0b"/>
+      <path d="M50 50 L50 96 A46 46 0 0 1 4 50 Z" fill="#10b981"/>
+      <path d="M50 50 L4 50 A46 46 0 0 1 50 4 Z" fill="#3b82f6"/>
+      <circle cx="50" cy="50" r="12" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+    </svg>
+    Lucky Spin
+  </h1>
+
+  <!-- BẢNG ĐIỀU KHIỂN CHUNG -->
+  <div class="global-controls">
+    <div class="control-group">
+      <label>Số lượng vòng quay:</label>
+      <input type="number" id="wheelCountInput" value="2" min="1" max="6" style="width: 55px;" onchange="validateCount(this)">
+      <span class="limit-hint">(1 - 6 vòng)</span>
+      <button class="btn btn-primary" onclick="generateWheels()">⚡ Tạo Vòng</button>
+    </div>
+
+    <div class="control-group">
+      <label for="excelFile" class="btn btn-excel" style="margin: 0; cursor: pointer;">📁 Nạp Excel Cho Tất Cả</label>
+      <input type="file" id="excelFile" accept=".xlsx, .xls" style="display: none;" onchange="handleExcel(event)">
+    </div>
+
+    <div class="control-group">
+      <button class="btn btn-primary" onclick="spinAll('normal')">▶ QUAY TẤT CẢ</button>
+      <button class="btn btn-fast" onclick="spinAll('fast')">🔥 QUAY NHANH</button>
+      <button class="btn btn-warning" id="autoSpinAllBtn" onclick="toggleAutoSpinAll()">🔄 Auto Quay</button>
+      <button class="btn btn-reset" onclick="resetAll()">🧹 Reset Mới</button>
+    </div>
+  </div>
+
+  <!-- VÙNG LƯỚI CHỨA CÁC VÒNG QUAY -->
+  <div class="wheels-grid" id="wheelsContainer"></div>
+
+  <script>
+    // 1. Tự động xóa sạch cache & bộ nhớ trình duyệt khi load/f5 trang
+    window.onload = function() {
+      localStorage.clear();
+      sessionStorage.clear();
+      generateWheels();
+    };
+
+    // Tự động kích hoạt AudioContext ngay tương tác đầu tiên của người dùng
+    document.addEventListener('click', initAudio, { once: true });
+    document.addEventListener('keydown', initAudio, { once: true });
+
+    const colorPalette = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#6366f1"];
+    const MAX_WHEELS = 6;
+
+    let wheelsData = [];
+    let audioCtx = null;
+    let autoSpinAllInterval = null;
+    let isAutoSpinningAll = false;
+
+    function validateCount(input) {
+      let val = parseInt(input.value) || 1;
+      if (val < 1) val = 1;
+      if (val > MAX_WHEELS) val = MAX_WHEELS;
+      input.value = val;
+    }
+
+    // Khởi tạo & Mở khóa Web Audio API
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // ÂM THANH 1: Tiếng tạch tạch đanh gọn khi vòng quay lướt qua các ô
+    function playTickSound() {
+      initAudio();
+      if (!audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.04);
+      
+      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.04);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.04);
+    }
+
+    // ÂM THANH 2: Nhạc chiến thắng / phần thưởng ngân vang hoành tráng
+    function playWinSound() {
+      initAudio();
+      if (!audioCtx) return;
+
+      const notes = [
+        { freq: 523.25, time: 0.0,  duration: 0.15 }, // Do (C5)
+        { freq: 659.25, time: 0.12, duration: 0.15 }, // Mi (E5)
+        { freq: 783.99, time: 0.24, duration: 0.15 }, // Sol (G5)
+        { freq: 1046.50, time: 0.36, duration: 0.6 }  // Do cao (C6)
+      ];
+
+      notes.forEach(note => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(note.freq, audioCtx.currentTime + note.time);
+
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime + note.time);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + note.time + note.duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(audioCtx.currentTime + note.time);
+        osc.stop(audioCtx.currentTime + note.time + note.duration);
+      });
+    }
+
+    // Tạo các vòng quay theo số lượng chọn
+    function generateWheels() {
+      const inputEl = document.getElementById('wheelCountInput');
+      validateCount(inputEl);
+      const count = parseInt(inputEl.value) || 1;
+
+      if (isAutoSpinningAll) toggleAutoSpinAll();
+
+      const container = document.getElementById('wheelsContainer');
+      container.innerHTML = '';
+      wheelsData = [];
+
+      const defaultText = "Giải Nhất\nGiải Nhì\nGiải Ba\nChúc May Mắn\nVoucher $100\nPhần Thưởng Bí Mật";
+
+      for (let i = 0; i < count; i++) {
+        const wheelId = i;
+        
+        const card = document.createElement('div');
+        card.className = 'wheel-card';
+        card.innerHTML = `
+          <div class="wheel-title">Vòng Quay Lucky Spin #${i + 1}</div>
+          <div class="wheel-wrapper">
+            <div class="arrow"></div>
+            <canvas id="canvas_${wheelId}" width="260" height="260"></canvas>
+          </div>
+          <div class="wheel-result" id="result_${wheelId}">Sẵn sàng quay!</div>
+          <div class="wheel-controls">
+            <div class="wheel-btn-group">
+              <button class="btn btn-primary" id="btn_spin_norm_${wheelId}" onclick="spinSingle(${wheelId}, 'normal')">▶ Quay</button>
+              <button class="btn btn-fast" id="btn_spin_fast_${wheelId}" onclick="spinSingle(${wheelId}, 'fast')">🔥 Nhanh</button>
+            </div>
+            <textarea id="textarea_${wheelId}" class="wheel-items" placeholder="Nhập danh sách quà (mỗi dòng 1 món)" onchange="updateSingleWheel(${wheelId})">${defaultText}</textarea>
+          </div>
+        `;
+        container.appendChild(card);
+
+        wheelsData.push({
+          id: wheelId,
+          canvas: document.getElementById(`canvas_${wheelId}`),
+          ctx: document.getElementById(`canvas_${wheelId}`).getContext('2d'),
+          prizes: [],
+          currentAngle: 0,
+          isSpinning: false,
+          lastSegmentIndex: -1
+        });
+
+        updateSingleWheel(wheelId);
+      }
+    }
+
+    // Cập nhật dữ liệu từ textarea
+    function updateSingleWheel(id) {
+      const text = document.getElementById(`textarea_${id}`).value;
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      
+      wheelsData[id].prizes = lines.map((item, index) => ({
+        text: item.trim(),
+        color: colorPalette[index % colorPalette.length]
+      }));
+
+      drawWheel(id);
+    }
+
+    // Vẽ vòng quay lên Canvas
+    function drawWheel(id) {
+      const data = wheelsData[id];
+      const prizes = data.prizes;
+      if (prizes.length === 0) return;
+
+      const ctx = data.ctx;
+      const canvas = data.canvas;
+      const numPrizes = prizes.length;
+      const arcSize = (2 * Math.PI) / numPrizes;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = canvas.width / 2;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numPrizes; i++) {
+        const angle = data.currentAngle + i * arcSize;
+        
+        // Vẽ ô quạt
+        ctx.beginPath();
+        ctx.fillStyle = prizes[i].color;
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, angle, angle + arcSize);
+        ctx.lineTo(centerX, centerY);
+        ctx.fill();
+
+        // Đường viền ô
+        ctx.strokeStyle = "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Vẽ chữ phần thưởng
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arcSize / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 13px system-ui, sans-serif";
+        ctx.shadowColor = "rgba(0,0,0,0.6)";
+        ctx.shadowBlur = 4;
+        ctx.fillText(prizes[i].text, radius - 14, 5);
+        ctx.restore();
+      }
+
+      // Trục tâm giữa vòng quay
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 18, 0, 2 * Math.PI);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.strokeStyle = "#cbd5e1";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Quay từng vòng đơn lẻ
+    function spinSingle(id, mode = 'normal') {
+      const data = wheelsData[id];
+      if (data.isSpinning || data.prizes.length === 0) return;
+
+      initAudio();
+      data.isSpinning = true;
+      document.getElementById(`btn_spin_norm_${id}`).disabled = true;
+      document.getElementById(`btn_spin_fast_${id}`).disabled = true;
+      document.getElementById(`result_${id}`).innerText = "Đang quay...";
+      data.lastSegmentIndex = -1;
+
+      const spinRounds = mode === 'fast' ? (2 + Math.random() * 2) : (5 + Math.random() * 3);
+      const totalDegrees = spinRounds * 2 * Math.PI;
+      const duration = mode === 'fast' ? 1200 : 3600;
+
+      const startAngle = data.currentAngle;
+      const startTime = performance.now();
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+
+        data.currentAngle = startAngle + easeOut * totalDegrees;
+        drawWheel(id);
+
+        const arcSize = (2 * Math.PI) / data.prizes.length;
+        const normalizedAngle = (data.currentAngle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+        const currentSegment = Math.floor(normalizedAngle / arcSize);
+        
+        // Phát tiếng tạch khi lướt ô
+        if (currentSegment !== data.lastSegmentIndex) {
+          playTickSound();
+          data.lastSegmentIndex = currentSegment;
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          data.isSpinning = false;
+          document.getElementById(`btn_spin_norm_${id}`).disabled = false;
+          document.getElementById(`btn_spin_fast_${id}`).disabled = false;
+          
+          const arrowAngle = (3 * Math.PI / 2 - normalizedAngle + 2 * Math.PI) % (2 * Math.PI);
+          const winningIndex = Math.floor(arrowAngle / arcSize);
+          
+          // Phát nhạc mừng + pháo hoa confetti
+          playWinSound();
+          confetti({ particleCount: 45, spread: 60, origin: { y: 0.75 } });
+          document.getElementById(`result_${id}`).innerText = "🎉 " + data.prizes[winningIndex].text;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // Quay tất cả vòng cùng lúc
+    function spinAll(mode = 'normal') {
+      wheelsData.forEach(w => spinSingle(w.id, mode));
+    }
+
+    // Chế độ Auto Quay tự động
+    function toggleAutoSpinAll() {
+      const btn = document.getElementById('autoSpinAllBtn');
+      if (isAutoSpinningAll) {
+        clearInterval(autoSpinAllInterval);
+        isAutoSpinningAll = false;
+        btn.innerText = "🔄 Auto Quay";
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-warning');
+      } else {
+        isAutoSpinningAll = true;
+        btn.innerText = "🛑 Dừng Auto";
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-danger');
+        
+        spinAll('normal');
+        autoSpinAllInterval = setInterval(() => {
+          const anySpinning = wheelsData.some(w => w.isSpinning);
+          if (!anySpinning) spinAll('normal');
+        }, 4600);
+      }
+    }
+
+    // Đọc danh sách từ Excel (SheetJS)
+    function handleExcel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const importedItems = jsonData.map(row => row[0]).filter(val => val !== undefined && val !== null);
+
+        if (importedItems.length > 0) {
+          const textValue = importedItems.join('\n');
+          wheelsData.forEach(w => {
+            document.getElementById(`textarea_${w.id}`).value = textValue;
+            updateSingleWheel(w.id);
+          });
+        } else {
+          alert("Không tìm thấy dữ liệu ở Cột A của file Excel!");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Reset làm mới ứng dụng
+    function resetAll() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
